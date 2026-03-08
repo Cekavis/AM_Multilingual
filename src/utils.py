@@ -2,6 +2,12 @@ import re, time, base64, requests, opencc, json, os
 from dotenv import load_dotenv
 import os
 
+from pypinyin import lazy_pinyin, Style
+import pykakasi
+
+import hangul_romanize
+from hangul_romanize.rule import academic
+
 
 load_dotenv() 
 # -----------------------------------------------------
@@ -107,3 +113,18 @@ def is_unwanted(item: dict) -> bool:
         if kw in name or kw in album_name:
             return True
     return False
+
+_kks = pykakasi.kakasi()
+_hangul = hangul_romanize.Transliter(academic)
+
+def to_sort_string(text: str, locale: str) -> str:
+    if locale in ("zh_Hans", "zh_Hant"):
+        pinyin = lazy_pinyin(text, style=Style.NORMAL)
+        return " ".join(p.capitalize() for p in pinyin)
+    elif locale == "ja":
+        result = _kks.convert(text)
+        return " ".join(item["hepburn"].capitalize() for item in result if item["hepburn"])
+    elif locale == "ko":
+        return _hangul.translit(text)
+    else:
+        return text

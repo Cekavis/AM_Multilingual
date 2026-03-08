@@ -2,7 +2,7 @@
 import requests, time
 
 from src.utils import AREA_TO_LOCALE, MB_HEADERS, _s2t, _t2s, save_json, load_json
-from src.utils import ARTIST_CACHE_FILE, MB_CACHE_FILE
+from src.utils import ARTIST_CACHE_FILE, MB_CACHE_FILE, split_artists
 
 _artist_cache   = load_json(ARTIST_CACHE_FILE)   # spotify_id → localized name
 _mb_cache       = load_json(MB_CACHE_FILE)        # spotify_name → {area, mbid, aliases}
@@ -85,6 +85,19 @@ def get_mb_info(spotify_name: str) -> dict:
     _mb_cache[spotify_name] = result
     save_json(MB_CACHE_FILE, _mb_cache)
     return result
+
+def get_artist_locale(artist_name: str) -> str | None:
+    first = split_artists(artist_name)[0]
+
+    mb = _mb_cache.get(first)
+    if not mb:
+        mb = find_in_cache_by_alias(first)
+    if not mb:
+        print(f"⚠️ Artist '{first}' not found in MB cache")
+        return None
+    
+    area = mb.get("area")
+    return AREA_TO_LOCALE.get(area)
 
 def localize_artist(spotify_name: str) -> str:
     if spotify_name in _artist_cache:

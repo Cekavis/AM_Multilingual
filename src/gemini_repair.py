@@ -4,7 +4,8 @@ import json, csv, time
 from src.utils import GEMINI_API, load_json, save_json
 from src.utils import split_artists, join_artists
 from src.utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE
-from src.musicbrain import localize_artist
+from src.utils import to_sort_string
+from src.musicbrain import localize_artist, get_artist_locale
 
 _spotify_cache  = load_json(SPOTIFY_CACHE_FILE)
 _fixed_ids:set  = set(load_json(FIXED_ID_FILE) or [])
@@ -35,6 +36,17 @@ No explanation, just JSON.
     text = resp.text.strip().removeprefix("```json").removesuffix("```").strip()
     return json.loads(text)
 
+def patch_sort_fields(row: dict):
+
+    locale = get_artist_locale(row["artist"])
+    if not locale:
+        return row
+    
+    row["sort_name"]         = to_sort_string(row["name"], locale)
+    row["sort_artist"]       = to_sort_string(row["artist"], locale)
+    row["sort_album_artist"] = to_sort_string(row["album_artist"], locale)
+    row["sort_album"]        = to_sort_string(row["album"], locale)
+    return row
 
 def gemini_main():
     with open("data/music_library.csv", encoding="utf-8") as f:
@@ -83,7 +95,7 @@ def gemini_main():
             row["sort_album_artist"] = join_artists(album_artists)
             row["sort_album"]        = row["album"]
 
-
+            row = patch_sort_fields(row)
             _spotify_cache[cache_key] = row
             save_json(SPOTIFY_CACHE_FILE, _spotify_cache)
         else:
