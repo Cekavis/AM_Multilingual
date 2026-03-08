@@ -34,6 +34,10 @@ Install dependencies:
 
 ---
 
+## Preview
+
+![Preview](https://github.com/user-attachments/assets/418d2d5b-2eb5-46b8-995a-fdf01f91bcc2)
+
 ## 🚀 Quick Start
 
 ### 1. Clone the repository
