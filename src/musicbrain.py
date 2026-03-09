@@ -1,8 +1,8 @@
 # ── MusicBrainz ───────────────────────────────────────
 import requests, time
 
-from src.utils import AREA_TO_LOCALE, MB_HEADERS, _s2t, _t2s, save_json, load_json
-from src.utils import ARTIST_CACHE_FILE, MB_CACHE_FILE, split_artists
+from utils import AREA_TO_LOCALE, MB_HEADERS, _s2t, _t2s, save_json, load_json
+from utils import ARTIST_CACHE_FILE, MB_CACHE_FILE, split_artists
 
 _artist_cache   = load_json(ARTIST_CACHE_FILE)   # spotify_id → localized name
 _mb_cache       = load_json(MB_CACHE_FILE)        # spotify_name → {area, mbid, aliases}

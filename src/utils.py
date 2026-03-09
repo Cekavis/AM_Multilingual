@@ -22,6 +22,9 @@ SPOTIFY_CACHE_FILE = "data/spotify_cache.json"
 ARTIST_CACHE_FILE  = "data/artist_cache.json"
 MB_CACHE_FILE      = "data/mb_cache.json"
 FIXED_ID_FILE      = "data/fixed_ids.json"
+
+MUSIC_LIBRARY_FILE = "data/music_library.csv"
+FAILED_LOG_FILE    = "data/failed_log.csv"
 # -----------------------------------------------------
 # -----------------------------------------------------
 

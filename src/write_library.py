@@ -1,5 +1,7 @@
+import os
 import subprocess, csv
-from src.utils import load_json, save_json
+from utils import load_json, save_json
+from utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE, FAILED_LOG_FILE
 
 
 def update_track(db_id: str, row: dict):
@@ -23,7 +25,7 @@ end tell
     return True
 
 
-def write_back(cache_file, _fixed_id_file):
+def write_back(cache_file, _fixed_id_file, fail_path="write_back_failed.csv"):
     updated, failed_list, skipped = 0, [], 0
     cache = load_json(cache_file)
     _fixed_ids:set  = set(load_json(_fixed_id_file) or [])
@@ -56,12 +58,15 @@ def write_back(cache_file, _fixed_id_file):
         print(f"\n❌ Failed {len(failed_list)}:")
         for r in failed_list:
             print(f"  db_id={r.get('db_id')} | {r.get('name')} — {r.get('artist')}")
+        
+        if os.path.exists(fail_path):
+            os.remove(fail_path)
 
-        with open("data/write_back_failed.csv", "w", newline="", encoding="utf-8") as f:
+        with open(fail_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=failed_list[0].keys())
             writer.writeheader()
             writer.writerows(failed_list)
-        print(f"  💾 Saved to data/write_back_failed.csv")
+        print(f"  💾 Saved to {fail_path}")
 
     print(f"\n✅ Done! Updated {updated}, failed {len(failed_list)}, skipped {skipped}")
 
@@ -69,7 +74,7 @@ def write_back(cache_file, _fixed_id_file):
 if __name__ == "__main__":
     print("📚 Reading library...")
 
-    cache_file = "data/spotify_cache.json"
-    fixed_id_file = "data/fixed_ids.json"
-
-    write_back(cache_file, fixed_id_file)
+    cache_file = SPOTIFY_CACHE_FILE
+    fixed_id_file = FIXED_ID_FILE
+    failed_log_file = FAILED_LOG_FILE
+    write_back(cache_file, fixed_id_file, fail_path=failed_log_file)

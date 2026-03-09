@@ -1,8 +1,8 @@
 import time, csv, requests
 
-from src.utils import has_unwanted_keywords, is_unwanted, join_artists, get_token, rate_limited_get, load_json, save_json
-from src.musicbrain import localize_artist
-from src.utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE
+from utils import has_unwanted_keywords, is_unwanted, join_artists, get_token, rate_limited_get, load_json, save_json
+from musicbrain import localize_artist
+from utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE
 
 _spotify_cache  = load_json(SPOTIFY_CACHE_FILE)
 _fixed_ids:set  = set(load_json(FIXED_ID_FILE) or [])

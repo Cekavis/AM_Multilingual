@@ -1,17 +1,17 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import json, csv, time
 
-from src.utils import GEMINI_API, load_json, save_json
-from src.utils import split_artists, join_artists
-from src.utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE
-from src.utils import to_sort_string
-from src.musicbrain import localize_artist, get_artist_locale
+from utils import GEMINI_API, load_json, save_json
+from utils import split_artists, join_artists
+from utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE
+from utils import to_sort_string
+from musicbrain import localize_artist, get_artist_locale
 
 _spotify_cache  = load_json(SPOTIFY_CACHE_FILE)
 _fixed_ids:set  = set(load_json(FIXED_ID_FILE) or [])
 
-genai.configure(api_key=GEMINI_API)
-model = genai.GenerativeModel("models/gemini-3.1-flash-lite-preview")
+client = genai.Client(api_key=GEMINI_API)
 
 def llm_correct_metadata(song: str, artist: str, album: str) -> dict:
     prompt = f"""
@@ -32,9 +32,15 @@ Album: {album}
 
 No explanation, just JSON.
 """
-    resp = model.generate_content(prompt)
-    text = resp.text.strip().removeprefix("```json").removesuffix("```").strip()
-    return json.loads(text)
+    
+    resp = client.models.generate_content(
+        model="gemini-3.1-flash-lite-preview",
+        contents=prompt,
+    )
+    text = resp.text.strip()
+    start = text.find("{")
+    end   = text.rfind("}") + 1
+    return json.loads(text[start:end])
 
 def patch_sort_fields(row: dict):
 
@@ -109,11 +115,12 @@ def gemini_main():
 
 
 if __name__ == "__main__":
-    resp = model.generate_content(
-        'Reply with this exact JSON only: {"status": "ok", "model": "gemini-2.0-flash"}'
+    resp = client.models.generate_content(
+        model="gemini-3.1-flash-lite-preview",
+        contents='Reply with this exact JSON only: {"status": "ok", "model": "gemini-2.0-flash"}'
     )
     print(resp.text)
-    resp = json.load(resp.text)
+    resp = json.loads(resp.text)
 
     if resp['status'] == 'ok':
         gemini_main()
