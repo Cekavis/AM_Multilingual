@@ -50,12 +50,20 @@ def llm_correct_metadata(client, config, song: str, artist: str, album: str) -> 
 
 def patch_sort_fields(corrected: dict):
     locale = get_artist_locale(split_artists(corrected.get("artist_name", ""))[0])
-    if not locale:
-        return corrected
-    corrected["sort_name"]         = to_sort_string(corrected["song_name"], locale)
-    corrected["sort_artist"]       = to_sort_string(corrected["artist_name"], locale)
-    corrected["sort_album_artist"] = to_sort_string(corrected["album_artist_name"], locale)
-    corrected["sort_album"]        = to_sort_string(corrected["album_name"], locale)
+
+    if locale:
+        # CJK
+        corrected["sort_name"]         = to_sort_string(corrected["song_name"], locale)
+        corrected["sort_artist"]       = to_sort_string(corrected["artist_name"], locale)
+        corrected["sort_album_artist"] = to_sort_string(corrected["album_artist_name"], locale)
+        corrected["sort_album"]        = to_sort_string(corrected["album_name"], locale)
+    else:
+        # Latin
+        corrected["sort_name"]         = corrected["song_name"]
+        corrected["sort_artist"]       = corrected["artist_name"]
+        corrected["sort_album_artist"] = corrected["album_artist_name"]
+        corrected["sort_album"]        = corrected["album_name"]
+        
     return corrected
 
 def patch_metadata(client, config, song: str, artist: str, album: str) -> dict | None:
@@ -78,7 +86,7 @@ def gemini_main(recording_cache, fixed_cache, client, config):
 
     count = 1
     needs_review = []
-    pbar = tqdm(enumerate(tracks), total=len(tracks), desc="Processing")
+    pbar = tqdm(enumerate(tracks), total=len(tracks), desc="Processing", ncols=50)
     for i, t in pbar:
         pbar.set_postfix_str(f"{t['name'][:30]} — {t['artist'][:20]}")
         song   = t["name"].strip()
@@ -105,10 +113,14 @@ def gemini_main(recording_cache, fixed_cache, client, config):
                     "db_id": db_id,
                     "name": t["name"],
                     "artist": t["artist"],
+                    "album_artist": t["album_artist"],
                     "album": t["album"],
+                    "sep": "|||",
                     "corrected_name": gemini_result.get("song_name"),
                     "corrected_artist": gemini_result.get("artist_name"),
+                    "corrected_album_artist": gemini_result.get("album_artist_name"),
                     "corrected_album": gemini_result.get("album_name"),
+                    "confirmed": 0,
                 })
         count += 1
     

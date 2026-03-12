@@ -18,8 +18,9 @@ Useful if your library contains:
 - Generates romanized sort fields (pinyin, romaji, romanization) for CJK and Korean names
 - Writes corrected metadata back to Music.app via AppleScript
 - Incremental processing — already-fixed tracks are skipped automatically
-- Caches all results locally to avoid redundant API calls
 - MusicBrainz integration for artist name localization
+- Manual review workflow for low-confidence corrections
+- Caches all results locally to avoid redundant API calls, (Also shared my music brain cache and formalized artist name cache file there)
 
 ---
 
@@ -38,7 +39,7 @@ Useful if your library contains:
 Install dependencies:
 
 ```bash
-pip install google-genai tqdm python-dotenv opencc-python-reimplemented pypinyin pykakasi hangul-romanize
+pip3 install google-genai tqdm python-dotenv opencc-python-reimplemented pypinyin pykakasi hangul-romanize
 ```
 
 ---
@@ -57,8 +58,8 @@ In `src/utils.py`, set your tier:
 PAID_USER = False  # Set to True if using a paid Gemini API key
 ```
 
-- `False` (free tier): **500 RPD**
-- `True` (paid tier): supports Google Search grounding for newer releases
+- `False` (free tier): uses `gemini-3.1-flash-lite-preview` — supports JSON schema output, **1,500 RPD**
+- `True` (paid tier): uses `gemini-3-flash` — supports both JSON schema output **and** Google Search grounding for newer releases
 
 ---
 
@@ -93,12 +94,47 @@ This runs all three steps in sequence:
 Or run each step individually:
 
 ```bash
-python -m src.get_library      # Step 1: Export library
-python -m src.gemini_repair    # Step 2: Fix metadata
-python -m src.write_library    # Step 3: Write back to Music.app
+python3 -m src.get_library      # Step 1: Export library
+python3 -m src.gemini_repair    # Step 2: Fix metadata
+python3 -m src.write_library    # Step 3: Write back to Music.app
 ```
 
 > ⚠️ Always **back up your library** before running `write_library`.
+
+---
+
+## 🔍 Manual Review Workflow
+
+Tracks where Gemini is uncertain are flagged as `needs_review` and saved to `data/needs_review.csv` instead of being written back automatically. Use this workflow to handle them:
+
+### Step 1 — Review and confirm in Excel / Numbers
+
+Open `data/needs_review.csv` and check each row:
+
+| Field | Description |
+|---|---|
+| `confirmed` | Change from `0` to `1` when you have verified or corrected the row |
+| `corrected_name` | Edit if the song name is wrong |
+| `corrected_artist` | Edit if the artist name is wrong |
+| `corrected_album` | Edit if the album name is wrong |
+
+Leave `confirmed = 0` to skip a row and keep it pending for next time.
+
+### Step 2 — Apply manual corrections
+
+```bash
+python3 -m src.manual_repair
+```
+
+Rows marked `confirmed = 1` are written back to `cache/recording_cache.json` with `needs_review` cleared to `false`.
+
+### Step 3 — Write back to Music.app
+
+```bash
+python3 -m src.write_library
+```
+
+All confirmed tracks are now included in the write-back.
 
 ---
 
@@ -110,17 +146,20 @@ python -m src.write_library    # Step 3: Write back to Music.app
 │   ├── __init__.py
 │   ├── get_library.py      # Export library from Music.app via AppleScript
 │   ├── gemini_repair.py    # Fix metadata using Gemini API
+│   ├── manual_repair.py    # Apply manual corrections from needs_review.csv
 │   ├── write_library.py    # Write corrected metadata back to Music.app
 │   ├── musicbrain.py       # MusicBrainz artist name localization
 │   └── utils.py            # Shared helpers (cache, rate limiting, romanization)
 ├── cache/
-│   ├── artist_cache.json   # Cached MusicBrainz artist localization results
-│   └── mb_cache.json       # Cached MusicBrainz lookups
+│   ├── recording_cache.json  # Cached corrected metadata
+│   ├── artist_cache.json     # Cached MusicBrainz artist localization results
+│   └── mb_cache.json         # Cached MusicBrainz lookups
 ├── data/
-│   └── music_library.csv   # Raw exported library from Music.app
-├── fix_gemini.sh           # One-click fix script
+│   ├── music_library.csv     # Raw exported library from Music.app
+│   └── needs_review.csv      # Tracks flagged for manual review
+├── fix_gemini.sh             # One-click fix script
 ├── README.md
-└── .env                    # Your API key (do not commit)
+└── .env                      # Your API key (do not commit)
 ```
 
 ---
@@ -152,7 +191,7 @@ Processed results are stored in `cache/recording_cache.json`. Each entry uses `"
 }
 ```
 
-Tracks flagged with `"needs_review": true` are skipped during write-back and should be checked manually.
+Tracks flagged with `"needs_review": true` are skipped during write-back and should be handled via the manual review workflow.
 
 ---
 
@@ -171,8 +210,9 @@ The tool correctly handles metadata in:
 
 - Always **back up your library** before running `write_library.py`
 - Tracks are matched by `database ID` from Music.app — re-importing a track will change its ID and require re-processing
-- The `cache/`, `data/`, and `.env` files are gitignored by default to protect your personal data and API keys
+- The `cache/recording_cache.json`, `data/`, and `.env` files are gitignored by default to protect your personal data and API keys
 - MusicBrainz API has a strict rate limit of **1 request/second** — the tool handles this automatically
+- Gemini prefer to return to the "official standard album name" and remove edition tags such as (Deluxe), - Single, - EP.
 
 ---
 
