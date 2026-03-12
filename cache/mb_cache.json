@@ -3127,5 +3127,121 @@
       "zh_Hans": "莫文蔚",
       "zh_Hant": "莫文蔚"
     }
+  },
+  "AGA": {
+    "area": "Hong Kong",
+    "aliases": {
+      "en": "AGA",
+      "zh_Hant": "江海迦",
+      "zh_Hans": "江海迦"
+    }
+  },
+  "艾怡良": {
+    "area": "Taiwan",
+    "aliases": {
+      "en": "Eve Ai",
+      "ja": "アイ・イーリャン",
+      "zh": "艾怡良",
+      "zh-Hans": "艾怡良",
+      "zh-Hant": "艾怡良"
+    }
+  },
+  "Al Bano": {
+    "area": "Italy",
+    "aliases": {
+      "ru": "Аль Бано"
+    }
+  },
+  "Romina Power": {
+    "area": "United States",
+    "aliases": {}
+  },
+  "Germaine Franco": {
+    "area": "United States",
+    "aliases": {}
+  },
+  "B.B.クイーンズ": {
+    "area": null,
+    "aliases": {}
+  },
+  "B.B.クィーンズ": {
+    "area": "Japan",
+    "aliases": {
+      "ja": "B.B.クィーンズ"
+    }
+  },
+  "蔡健雅": {
+    "area": "Singapore",
+    "aliases": {
+      "en": "Tanya Chua",
+      "zh": "蔡健雅",
+      "zh_Hans": "蔡健雅",
+      "zh_Hant": "蔡健雅"
+    }
+  },
+  "蔡依林": {
+    "area": "Taiwan",
+    "aliases": {
+      "en": "Jolin Tsai",
+      "zh_Hans": "蔡依林",
+      "zh_Hant": "蔡依林"
+    }
+  },
+  "Charli XCX": {
+    "area": "England",
+    "aliases": {
+      "en": "Charli XCX",
+      "kk": "Чарли XCX",
+      "bg": "Чарли Екс Си Екс",
+      "sr": "Чарли Екс-Си-Екс",
+      "hy": "Չարլի ԷքսՍիԷքս",
+      "he": "צ'ארלי XCX",
+      "fa": "چارلی ایکس‌سی‌ایکس",
+      "ar": "شارلي إكس سي إكس",
+      "sd": "چارلي ايڪس‌سي ايڪس",
+      "ku": "چارلی ئێکس سی ئێکس",
+      "az_Arab": "چارلی ایکس‌سیایکس",
+      "ur": "چارلی ایکس‌سی‌ایکس",
+      "ta": "சார்லி எக்ஸ்சிஎக்ஸ்",
+      "th": "ชาร์ลี เอ็กซ์ซีเอ็กซ์",
+      "ka": "ჩარლი ექსიექსი",
+      "ja": "チャーリー・XCX",
+      "zh": "查莉 XCX",
+      "ko": "찰리 XCX"
+    }
+  },
+  "陳柏宇": {
+    "area": "Hong Kong",
+    "aliases": {
+      "en": "Chan Pak Yu",
+      "zh_Hans": "陈柏宇",
+      "zh_Hant": "陳柏宇"
+    }
+  },
+  "陳慧嫻": {
+    "area": "Hong Kong",
+    "aliases": {
+      "en": "Chan Wai Han",
+      "ja": "プリシラ・チャン",
+      "zh_Hans": "陈慧娴",
+      "zh_Hant": "陳慧嫻"
+    }
+  },
+  "陳凱詠": {
+    "area": "Hong Kong",
+    "aliases": {
+      "en": "Jace Chan",
+      "zh_Hans": "陈凯咏",
+      "zh_Hant": "陳凱詠"
+    }
+  },
+  "陈粒": {
+    "area": "China",
+    "aliases": {
+      "en": "Chen Li",
+      "zh_Hans_CN": "陈粒",
+      "zh_Hans": "陈粒",
+      "zh_Hant": "陳粒"
+    }
   }
 }

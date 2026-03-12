@@ -1,17 +1,16 @@
-import os
-import subprocess, csv
+import subprocess
 from utils import load_json, save_json
-from utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE, FAILED_LOG_FILE
+from utils import RECORDING_CACHE_FILE, FIXED_CACHE_FILE
 
 
 def update_track(db_id: str, row: dict):
     script = f'''
 tell application "Music"
     set t to first track of library playlist 1 whose database ID is {db_id}
-    set name of t to "{row["name"].replace('"', '\\"')}"
-    set artist of t to "{row["artist"].replace('"', '\\"')}"
-    set album artist of t to "{row["album_artist"].replace('"', '\\"')}"
-    set album of t to "{row["album"].replace('"', '\\"')}"
+    set name of t to "{row["song_name"].replace('"', '\\"')}"
+    set artist of t to "{row["artist_name"].replace('"', '\\"')}"
+    set album artist of t to "{row["album_artist_name"].replace('"', '\\"')}"
+    set album of t to "{row["album_name"].replace('"', '\\"')}"
     set sort name of t to "{row["sort_name"].replace('"', '\\"')}"
     set sort artist of t to "{row["sort_artist"].replace('"', '\\"')}"
     set sort album artist of t to "{row["sort_album_artist"].replace('"', '\\"')}"
@@ -25,12 +24,10 @@ end tell
     return True
 
 
-def write_back(cache_file, _fixed_id_file, fail_path="write_back_failed.csv"):
-    updated, failed_list, skipped = 0, [], 0
-    cache = load_json(cache_file)
-    _fixed_ids:set  = set(load_json(_fixed_id_file) or [])
-
-    for cache_key, row in cache.items():
+def write_back(tracks, fixed_cache):
+    skipped = 0
+    updated = 0
+    for cache_key, row in tracks.items():
         if row is None:
             skipped += 1
             continue
@@ -40,41 +37,22 @@ def write_back(cache_file, _fixed_id_file, fail_path="write_back_failed.csv"):
             skipped += 1
             continue
 
-        if db_id in _fixed_ids:
-            skipped += 1
-            continue
-
-        print(f"  ✏️  Updating {db_id}: {row['name']} — {row['artist']}")
         ok = update_track(db_id, row)
         if ok:
             updated += 1
-            _fixed_ids.add(db_id)
-        else:
-            failed_list.append(row)
+            fixed_cache.add(db_id)
 
-    save_json(_fixed_id_file, list(_fixed_ids))
+    save_json(FIXED_CACHE_FILE, list(fixed_cache))
 
-    if failed_list:
-        print(f"\n❌ Failed {len(failed_list)}:")
-        for r in failed_list:
-            print(f"  db_id={r.get('db_id')} | {r.get('name')} — {r.get('artist')}")
-        
-        if os.path.exists(fail_path):
-            os.remove(fail_path)
-
-        with open(fail_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=failed_list[0].keys())
-            writer.writeheader()
-            writer.writerows(failed_list)
-        print(f"  💾 Saved to {fail_path}")
-
-    print(f"\n✅ Done! Updated {updated}, failed {len(failed_list)}, skipped {skipped}")
+    print(f"    Done! Updated {updated}, skipped {skipped}")
 
 
 if __name__ == "__main__":
-    print("📚 Reading library...")
+    print("📚 Writing library...")
+    recording_cache  = load_json(RECORDING_CACHE_FILE)
+    fixed_cache:set  = set(load_json(FIXED_CACHE_FILE) or [])
 
-    cache_file = SPOTIFY_CACHE_FILE
-    fixed_id_file = FIXED_ID_FILE
-    failed_log_file = FAILED_LOG_FILE
-    write_back(cache_file, fixed_id_file, fail_path=failed_log_file)
+    tracks = {k: v for k, v in recording_cache.items() if v and v.get("db_id") not in fixed_cache}
+    print(f"    Writing {len(tracks)} tracks back")
+    write_back(tracks, fixed_cache)
+    print("📚 Library update completed!")

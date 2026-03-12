@@ -1,7 +1,7 @@
 import subprocess
 import csv
 import os
-from utils import MUSIC_LIBRARY_FILE
+from .utils import MUSIC_LIBRARY_FILE, FIELDS
 
 APPLESCRIPT = '''
 tell application "Music"
@@ -22,12 +22,6 @@ tell application "Music"
     return output
 end tell
 '''
-
-FIELDS = [
-    "db_id", "name",
-    "artist", "album_artist", "album",
-    "sort_name", "sort_artist", "sort_album_artist", "sort_album"
-]
 
 def fetch_library() -> list[dict]:
     result = subprocess.run(
@@ -55,12 +49,11 @@ def save_csv(tracks, path="default.csv"):
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(tracks)
-    print(f"✅ Saved {len(tracks)} tracks to {path}")
+    print(f"    Saved {len(tracks)} tracks to {path}")
 
 if __name__ == "__main__":
     print("📚 Reading library...")
     tracks = fetch_library()
-    print(f"🎵 Found {len(tracks)} tracks")
+    print(f"    Found {len(tracks)} tracks")
     save_csv(tracks, MUSIC_LIBRARY_FILE)
-    for t in tracks[:5]:
-        print(t)
+    print("📚 Library saved!")

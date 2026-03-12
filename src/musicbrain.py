@@ -1,11 +1,12 @@
 # ── MusicBrainz ───────────────────────────────────────
 import requests, time
 
-from utils import AREA_TO_LOCALE, MB_HEADERS, _s2t, _t2s, save_json, load_json
-from utils import ARTIST_CACHE_FILE, MB_CACHE_FILE, split_artists
+from .utils import MB_HEADERS
+from .utils import _s2t, _t2s, save_json, load_json
+from .utils import ARTIST_CACHE_FILE, MB_CACHE_FILE, AREA_TO_LOCALE
 
-_artist_cache   = load_json(ARTIST_CACHE_FILE)   # spotify_id → localized name
-_mb_cache       = load_json(MB_CACHE_FILE)        # spotify_name → {area, mbid, aliases}
+_artist_cache   = load_json(ARTIST_CACHE_FILE)  
+_mb_cache       = load_json(MB_CACHE_FILE)  
 
 def mb_get(path, params):
     for attempt in range(3):
@@ -24,31 +25,31 @@ def mb_get(path, params):
             time.sleep(wait)
     return None
 
-def find_in_cache_by_alias(name: str) -> dict | None:
+def find_in_cache_by_alias(artist_name: str) -> dict | None:
     for cached_name, info in _mb_cache.items():
         if info is None:
             continue
         aliases = info.get("aliases", {})
-        if name in aliases.values():
+        if artist_name in aliases.values():
             return info
     return None
 
-def get_mb_info(spotify_name: str) -> dict:
+def get_mb_info(artist_name: str) -> dict:
     """Check MusicBrainz: return area + aliases"""
-    if spotify_name in _mb_cache:
-        return _mb_cache[spotify_name]
-    
-    found = find_in_cache_by_alias(spotify_name)
+    if artist_name in _mb_cache:
+        return _mb_cache[artist_name]
+
+    found = find_in_cache_by_alias(artist_name)
     if found:
-        _mb_cache[spotify_name] = found
+        _mb_cache[artist_name] = found
         save_json(MB_CACHE_FILE, _mb_cache)
         return found
     
     # Step 1: Search artist by Spotify name to get MBID and area
-    data = mb_get("artist", {"query": f'{spotify_name}', "limit": 1})
+    data = mb_get("artist", {"query": f'{artist_name}', "limit": 1})
     if not data or not data.get("artists"):
         result = {"area": None, "aliases": {}}
-        _mb_cache[spotify_name] = result
+        _mb_cache[artist_name] = result
         save_json(MB_CACHE_FILE, _mb_cache)
         return result
 
@@ -60,12 +61,16 @@ def get_mb_info(spotify_name: str) -> dict:
     detail  = mb_get(f"artist/{mbid}", {"inc": "aliases"})
     aliases = {}
     if detail:
+        primary_name = detail.get("name", "")
+        if area in AREA_TO_LOCALE:
+            aliases[AREA_TO_LOCALE.get(area)] = primary_name
+
         for a in detail.get("aliases", []):
             locale = a.get("locale")
             if not locale:
                 continue
             # primary alias takes precedence if multiple aliases share the same locale
-            if locale not in aliases or a.get("primary") == "primary":
+            if locale not in aliases or a.get("primary") is True:
                 aliases[locale] = a["name"]
 
     if area in ["China", "Taiwan", "Hong Kong", "Singapore", "Malaysia"]:
@@ -82,36 +87,32 @@ def get_mb_info(spotify_name: str) -> dict:
                 aliases["zh_Hant"] = _s2t.convert(zh_value)
 
     result = {"area": area, "aliases": aliases}
-    _mb_cache[spotify_name] = result
+    _mb_cache[artist_name] = result
     save_json(MB_CACHE_FILE, _mb_cache)
     return result
 
 def get_artist_locale(artist_name: str) -> str | None:
-    first = split_artists(artist_name)[0]
-
-    mb = _mb_cache.get(first)
+    mb = _mb_cache.get(artist_name)
     if not mb:
-        mb = find_in_cache_by_alias(first)
+        mb = find_in_cache_by_alias(artist_name)
     if not mb:
-        print(f"⚠️ Artist '{first}' not found in MB cache")
         return None
-    
     area = mb.get("area")
     return AREA_TO_LOCALE.get(area)
 
-def localize_artist(spotify_name: str) -> str:
-    if spotify_name in _artist_cache:
-        return _artist_cache[spotify_name]
+def localize_artist(artist_name: str) -> str:
+    if artist_name in _artist_cache:
+        return _artist_cache[artist_name]
 
-    mb    = get_mb_info(spotify_name)
+    mb    = get_mb_info(artist_name)
     area  = mb["area"]
     locale = AREA_TO_LOCALE.get(area)
 
     if not locale:
-        result = spotify_name
+        result = artist_name
     else:
-        result = mb["aliases"].get(locale, spotify_name)
+        result = mb["aliases"].get(locale, artist_name)
 
-    _artist_cache[spotify_name] = result
+    _artist_cache[artist_name] = result
     save_json(ARTIST_CACHE_FILE, _artist_cache)
     return result

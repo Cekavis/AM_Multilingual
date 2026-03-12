@@ -1,8 +1,8 @@
 *.env
-data/fixed_ids.json
-data/spotify_cache.json
-data/music_library.csv
-data/failed_log.csv
+data/
+cache/recording_cache.json
+cache/fixed_cache.json
 __pycache__/
 test.ipynb
 .DS_Store
+backup/

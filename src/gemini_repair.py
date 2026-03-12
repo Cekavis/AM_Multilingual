@@ -1,126 +1,143 @@
+import json, csv
+from tqdm import tqdm
+
 from google import genai
 from google.genai import types
-import json, csv, time
+from .utils import GEMINI_API, MODEL_NAME, MODEL_CAPS, QUERY_TEMPLATE, METADATA_SCHEMA
+from .utils import rate_limited_call
 
-from utils import GEMINI_API, load_json, save_json
-from utils import split_artists, join_artists
-from utils import SPOTIFY_CACHE_FILE, FIXED_ID_FILE
-from utils import to_sort_string
-from musicbrain import localize_artist, get_artist_locale
+from .musicbrain import localize_artist, get_artist_locale
 
-_spotify_cache  = load_json(SPOTIFY_CACHE_FILE)
-_fixed_ids:set  = set(load_json(FIXED_ID_FILE) or [])
+from .utils import MUSIC_LIBRARY_FILE, RECORDING_CACHE_FILE, FIXED_CACHE_FILE, FAILED_LOG_FILE
+from .utils import load_json, save_json, split_artists, join_artists
+from .utils import to_sort_string
 
-client = genai.Client(api_key=GEMINI_API)
 
-def llm_correct_metadata(song: str, artist: str, album: str) -> dict:
-    prompt = f"""
-I have a song with possibly incorrect or transliterated metadata:
-Song: {song}
-Artist: {artist}
-Album: {album}
+def build_generation_config(model_name: str) -> types.GenerateContentConfig:
+    caps = MODEL_CAPS.get(model_name, {"google_search": False, "json_schema": False})
+    kwargs = {}
+    if caps["json_schema"]:
+        kwargs["response_mime_type"] = "application/json"
+        kwargs["response_json_schema"] = METADATA_SCHEMA
+    if caps["google_search"]:
+        kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
+    return types.GenerateContentConfig(**kwargs)
 
-1. Identify the original release country of this song.
-2. Return the correct metadata in the original language (e.g. Chinese characters for Chinese songs).
-3. Return ONLY a JSON object with these fields:
-   - song_name
-   - artist_name        (ALL artists separated by ", " and "&" for the last one, e.g. "A, B & C". Do NOT use "feat.", "ft.", "with" or any other prefix. Just list all artist names.)
-   - album_artist       (main album artist, usually just the primary artist)
-   - album_name
-   - country (e.g. "China", "Japan", "Hong Kong", "Taiwan", "USA" )
-   - language (e.g. "Traditional Chinese", "Japanese", "Simplified Chinese", "English")
-
-No explanation, just JSON.
-"""
-    
-    resp = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
+def _gemini_generate(client, config, prompt):
+    return client.models.generate_content(
+        model=MODEL_NAME,
         contents=prompt,
+        config=config
     )
-    text = resp.text.strip()
-    start = text.find("{")
-    end   = text.rfind("}") + 1
-    return json.loads(text[start:end])
 
-def patch_sort_fields(row: dict):
+def llm_correct_metadata(client, config, song: str, artist: str, album: str) -> dict | None:
+    prompt = QUERY_TEMPLATE.format(song=song, artist=artist, album=album)
 
-    locale = get_artist_locale(row["artist"])
+    try:
+        resp = rate_limited_call(_gemini_generate, client, config, prompt)
+        if not resp.text:
+            return None
+        text = resp.text.strip()
+        start = text.find("{")
+        end   = text.rfind("}") + 1
+        data = json.loads(text[start:end])
+
+        if not isinstance(data, dict):
+            return None
+        return data
+    except Exception as e:
+        return None
+
+def patch_sort_fields(corrected: dict):
+    locale = get_artist_locale(split_artists(corrected.get("artist_name", ""))[0])
     if not locale:
-        return row
-    
-    row["sort_name"]         = to_sort_string(row["name"], locale)
-    row["sort_artist"]       = to_sort_string(row["artist"], locale)
-    row["sort_album_artist"] = to_sort_string(row["album_artist"], locale)
-    row["sort_album"]        = to_sort_string(row["album"], locale)
-    return row
+        return corrected
+    corrected["sort_name"]         = to_sort_string(corrected["song_name"], locale)
+    corrected["sort_artist"]       = to_sort_string(corrected["artist_name"], locale)
+    corrected["sort_album_artist"] = to_sort_string(corrected["album_artist_name"], locale)
+    corrected["sort_album"]        = to_sort_string(corrected["album_name"], locale)
+    return corrected
 
-def gemini_main():
-    with open("data/music_library.csv", encoding="utf-8") as f:
+def patch_metadata(client, config, song: str, artist: str, album: str) -> dict | None:
+
+    corrected = llm_correct_metadata(client, config, song, artist, album)
+    if not corrected:
+        return None
+    
+    track_artists = [localize_artist(a) for a in split_artists(corrected.get("artist_name", artist))]
+    album_artists = [localize_artist(a) for a in split_artists(corrected.get("album_artist_name", artist))]
+    corrected["artist_name"] = join_artists(track_artists)
+    corrected["album_artist_name"] = join_artists(album_artists)
+
+    corrected = patch_sort_fields(corrected)
+    return corrected
+
+def gemini_main(recording_cache, fixed_cache, client, config):
+    with open(MUSIC_LIBRARY_FILE, encoding="utf-8") as f:
         tracks = list(csv.DictReader(f))
 
-    print(f"📚 In total {len(tracks)} songs, starting...\n")
-
-    for i, t in enumerate(tracks):
+    count = 1
+    needs_review = []
+    pbar = tqdm(enumerate(tracks), total=len(tracks), desc="Processing")
+    for i, t in pbar:
+        pbar.set_postfix_str(f"{t['name'][:30]} — {t['artist'][:20]}")
         song   = t["name"].strip()
         artist = t["artist"].strip()
         album  = t["album"].strip()
         db_id = t["db_id"].strip()
 
-        if db_id in _fixed_ids:
+        if db_id in fixed_cache:
             continue
 
-        cache_key = f"{song}|||{artist}|||{album}"
-        if cache_key in _spotify_cache:
+        key = f"{song}|||{artist}|||{album}"
+        if key in recording_cache:
             continue
 
-        print(f"[{i+1}/{len(tracks)}] {song} — {artist}")
-        corrected = None
-        raw_track_artist = artist
-        raw_album_artist = artist
-        try:
-            corrected = llm_correct_metadata(song, artist, album)
-            raw_track_artist = corrected.get("artist_name", artist)
-            raw_album_artist = corrected.get("album_artist", artist)
+        # Start processing
+        gemini_result = patch_metadata(client, config, song, artist, album)
+        if gemini_result:
+            t.update(gemini_result)
+            recording_cache[key] = t
+            save_json(RECORDING_CACHE_FILE, recording_cache)
 
-        except Exception as e:
-            print(f"  ⚠️  Gemini Fail: {e}")
-
-        row = dict(t)
-        track_artists = [localize_artist(a) for a in split_artists(raw_track_artist)]
-        album_artists = [localize_artist(a) for a in split_artists(raw_album_artist)]
-
-        if corrected:
-            row["name"]         = corrected.get("song_name", song)
-            row["artist"]       = join_artists(track_artists)
-            row["album"]        = corrected.get("album_name", album)
-            row["album_artist"] = join_artists(album_artists)
-            row["country"]      = corrected.get("country", "")
-            row["language"]     = corrected.get("language", "")
-            row["sort_name"]         = row["name"]
-            row["sort_artist"]       = join_artists(track_artists)
-            row["sort_album_artist"] = join_artists(album_artists)
-            row["sort_album"]        = row["album"]
-
-            row = patch_sort_fields(row)
-            _spotify_cache[cache_key] = row
-            save_json(SPOTIFY_CACHE_FILE, _spotify_cache)
-        else:
-            print(f"  {song} ❌ Gemini correction failed")
-            _spotify_cache[cache_key] = None
-            save_json(SPOTIFY_CACHE_FILE, _spotify_cache)
-
-        time.sleep(4)  # 15 RPM 
-
-    print(f"\n✅ Done!")
+            if gemini_result.get("needs_review"):
+                needs_review.append({
+                    "db_id": db_id,
+                    "name": t["name"],
+                    "artist": t["artist"],
+                    "album": t["album"],
+                    "corrected_name": gemini_result.get("song_name"),
+                    "corrected_artist": gemini_result.get("artist_name"),
+                    "corrected_album": gemini_result.get("album_name"),
+                })
+        count += 1
+    
+    return needs_review
 
 
 if __name__ == "__main__":
+
+    recording_cache  = load_json(RECORDING_CACHE_FILE)
+    fixed_cache:set  = set(load_json(FIXED_CACHE_FILE) or [])
+
+    client = genai.Client(api_key=GEMINI_API)
+    config = build_generation_config(MODEL_NAME)
+
+    # Check API connectivity and model availability before the main loop to avoid wasting time on multiple failed attempts.
     resp = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
+        model=MODEL_NAME,
         contents='Reply with this exact JSON only: {"status": "ok", "model": "gemini-2.0-flash"}'
     )
-    print(resp.text)
     resp = json.loads(resp.text)
 
     if resp['status'] == 'ok':
-        gemini_main()
+        print(f"🤖 Gemini API is working and model {MODEL_NAME} is ready...")
+        needs_review = gemini_main(recording_cache, fixed_cache, client, config)
+        if needs_review:
+            with open(FAILED_LOG_FILE, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=needs_review[0].keys())
+                writer.writeheader()
+                writer.writerows(needs_review)
+            print(f"    {len(needs_review)} tracks need manual review, saved to {FAILED_LOG_FILE}")
+        print(f"🤖 Gemini work completed successfully!")
+
