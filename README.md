@@ -26,7 +26,7 @@ Useful if your library contains:
 
 ## Preview
 
-![Preview](https://github.com/user-attachments/assets/418d2d5b-2eb5-46b8-995a-fdf01f91bcc2)
+![Preview](https://github.com/user-attachments/assets/0a1f32db-0fe2-4de3-81a2-347e53f6536f)
 
 ---
 
