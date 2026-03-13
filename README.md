@@ -52,14 +52,8 @@ Create a `.env` file in the project root:
 
 ```
 GEMINI_API_KEY=your_api_key_here
+PAID_USER = false  # Set to true if using a paid Gemini API key
 ```
-
-In `src/utils.py`, set your tier:
-
-```python
-PAID_USER = False  # Set to True if using a paid Gemini API key
-```
-
 - `False` (free tier): uses `gemini-3.1-flash-lite-preview` — supports JSON schema output, **1,500 RPD**
 - `True` (paid tier): uses `gemini-3-flash` — supports both JSON schema output **and** Google Search grounding for newer releases
 

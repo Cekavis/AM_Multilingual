@@ -52,12 +52,7 @@ pip3 install google-genai tqdm python-dotenv opencc-python-reimplemented pypinyi
 
 ```
 GEMINI_API_KEY=your_api_key_here
-```
-
-在 `src/utils.py` 中设置你的账户类型：
-
-```python
-PAID_USER = False  # 付费账户设为 True
+PAID_USER = false  # 付费账户设为 true
 ```
 - `False`（免费版）：使用 `gemini-3.1-flash-lite-preview`，支持 JSON 结构化输出，**每日 1,500 次请求**
 - `True`（付费版）：使用 `gemini-3-flash`，同时支持 JSON 结构化输出和 **Google 搜索**（适合处理新歌）

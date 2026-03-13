@@ -72,9 +72,14 @@ def save_csv(tracks, path="default.csv"):
         writer.writerows(tracks)
     print(f"    Saved {len(tracks)} tracks to {path}")
 
-if __name__ == "__main__":
+def main():
     print("📚  Reading library...")
     tracks = fetch_library()
     print(f"    Found {len(tracks)} tracks")
     save_csv(tracks, MUSIC_LIBRARY_FILE)
     print("📚  Library saved!")
+
+    return len(tracks)
+
+if __name__ == "__main__":
+    main()

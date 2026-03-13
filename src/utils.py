@@ -15,7 +15,7 @@ load_dotenv()
 # Gemini API key
 GEMINI_API    = os.environ["GEMINI_API_KEY"]
 MODEL_NAME = "gemini-3.1-flash-lite-preview"
-PAID_USER = False  # Set to False if using a free-tier API key with limited access
+PAID_USER = os.environ.get("PAID_USER", "false").lower() == "true"
 # Cache files
 RECORDING_CACHE_FILE = "cache/recording_cache.json"
 ARTIST_CACHE_FILE  = "cache/artist_cache.json"

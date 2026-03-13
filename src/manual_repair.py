@@ -58,13 +58,19 @@ def manual_repair(cache: dict, rows: list[dict]):
         print(f"    Removed {removed} confirmed pairs from {FAILED_LOG_FILE}")
 
 
-if __name__ == "__main__":
-
-    recording_cache  = load_json(RECORDING_CACHE_FILE)
-
-    print("🗿  Reading manual review log...")
+def main():
+    print("🔍  Reading manual review log...")
     with open(FAILED_LOG_FILE, encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
+
+    if not rows:
+        print("    No entries found in manual review log.")
+        return
+    
     print(f"    Found {len(rows)/2} entries to update")
+    recording_cache  = load_json(RECORDING_CACHE_FILE)
     manual_repair(recording_cache, rows)
-    print("🗿  Manual repair completed!")
+    print("🔍  Manual repair completed!")
+
+if __name__ == "__main__":
+    main()

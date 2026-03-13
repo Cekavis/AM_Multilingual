@@ -57,8 +57,7 @@ def write_back(tracks_to_write, fixed_cache):
         for f in failed:
             print(f"        {f['name']} — {f['artist']} (db_id: {f['db_id']})")
 
-
-if __name__ == "__main__":
+def main():
     print("📚  Writing library...")
     recording_cache  = load_json(RECORDING_CACHE_FILE)
     fixed_cache:set  = set(load_json(FIXED_CACHE_FILE) or [])
@@ -67,3 +66,6 @@ if __name__ == "__main__":
     print(f"    Writing {len(tracks_to_write)} tracks back")
     write_back(tracks_to_write, fixed_cache)
     print("📚  Library update completed!")
+
+if __name__ == "__main__":
+    main()
