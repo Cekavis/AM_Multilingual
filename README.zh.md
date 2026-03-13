@@ -107,7 +107,8 @@ Gemini 置信度较低的结果会被标记为 `needs_review`，保存到 `data/
 
 打开 `data/needs_review.csv`，检查每一行：
 
-在确认或修改完成后，将 `confirmed` 修改 `0` 改为 `1` 
+在确认或修改完成后，将 `confirmed` 修改 `0` 改为 `1`。
+
 保留 `confirmed = 0` 则跳过该行，留待下次处理。
 
 ### 第二步 — 应用人工修正

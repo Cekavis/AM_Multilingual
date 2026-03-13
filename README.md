@@ -107,7 +107,8 @@ Tracks where Gemini is uncertain are flagged as `needs_review` and saved to `dat
 
 Open `data/needs_review.csv` and check each row:
 
-Change `confirmed` from `0` to `1` when you have verified or corrected the row
+Change `confirmed` from `0` to `1` when you have verified or corrected the row.
+
 Leave `confirmed = 0` to skip a row and keep it pending for next time.
 
 ### Step 2 — Apply manual corrections
