@@ -65,6 +65,7 @@ def fetch_library() -> list[dict]:
 def save_csv(tracks, path="default.csv"):
     if os.path.exists(path):
         os.remove(path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
 
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
