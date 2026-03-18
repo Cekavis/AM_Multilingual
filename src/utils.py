@@ -14,7 +14,7 @@ load_dotenv()
 # -----------------------------------------------------
 # Gemini API key
 GEMINI_API    = os.environ["GEMINI_API_KEY"]
-MODEL_NAME = "gemini-3.1-flash-lite-preview"
+MODEL_NAME = "gemini-3.1-pro-preview"
 PAID_USER = os.environ.get("PAID_USER", "false").lower() == "true"
 # Cache files
 RECORDING_CACHE_FILE = "cache/recording_cache.json"
@@ -47,7 +47,7 @@ AREA_TO_LOCALE = {
 }
 
 MODEL_CAPS = {
-    "gemini-3.1-flash-lite-preview": {
+    "gemini-3.1-pro-preview": {
         "google_search": True if PAID_USER else False,  # Google Search tool is only available for paid-tier API keys
         "json_schema":   True,
         "response_time": 0.5 if PAID_USER else 6,  # Paid-tier keys generally get faster responses, but this can vary

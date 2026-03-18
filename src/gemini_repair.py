@@ -6,11 +6,9 @@ from google.genai import types
 from .utils import GEMINI_API, MODEL_NAME, MODEL_CAPS, QUERY_TEMPLATE, METADATA_SCHEMA
 from .utils import rate_limited_call
 
-from .musicbrain import localize_artist, get_artist_locale
-
 from .utils import MUSIC_LIBRARY_FILE, RECORDING_CACHE_FILE, FIXED_CACHE_FILE, FAILED_LOG_FILE
 from .utils import load_json, save_json, split_artists, join_artists
-from .utils import to_sort_string
+from .utils import to_sort_string, AREA_TO_LOCALE
 
 
 def build_generation_config(model_name: str) -> types.GenerateContentConfig:
@@ -49,7 +47,7 @@ def llm_correct_metadata(client, config, song: str, artist: str, album: str) -> 
         return None
 
 def patch_sort_fields(corrected: dict):
-    locale = get_artist_locale(split_artists(corrected.get("artist_name", ""))[0])
+    locale = AREA_TO_LOCALE.get(corrected["country"])
 
     if locale:
         # CJK
@@ -72,8 +70,8 @@ def patch_metadata(client, config, song: str, artist: str, album: str) -> dict |
     if not corrected:
         return None
     
-    track_artists = [localize_artist(a) for a in split_artists(corrected.get("artist_name", artist))]
-    album_artists = [localize_artist(a) for a in split_artists(corrected.get("album_artist_name", artist))]
+    track_artists = [a for a in split_artists(corrected.get("artist_name", artist))]
+    album_artists = [a for a in split_artists(corrected.get("album_artist_name", artist))]
     corrected["artist_name"] = join_artists(track_artists)
     corrected["album_artist_name"] = join_artists(album_artists)
 
@@ -136,7 +134,7 @@ def main():
     recording_cache  = load_json(RECORDING_CACHE_FILE)
     fixed_cache:set  = set(load_json(FIXED_CACHE_FILE) or [])
 
-    client = genai.Client(api_key=GEMINI_API)
+    client = genai.Client(api_key=GEMINI_API) # type: ignore
     config = build_generation_config(MODEL_NAME)    
 
     # Check API connectivity and model availability before the main loop to avoid wasting time on multiple failed attempts.
@@ -144,7 +142,7 @@ def main():
         model=MODEL_NAME,
         contents='Reply with this exact JSON only: {"status": "ok"}'
     )
-    resp = json.loads(resp.text)
+    resp = json.loads(resp.text) # type: ignore
     if resp['status'] == 'ok':
         print(f"🤖  Gemini API is working and model {MODEL_NAME} is ready...")
         needs_review = gemini_main(recording_cache, fixed_cache, client, config)
