@@ -29,7 +29,7 @@ bash scripts/fix_gemini.sh
 
 # 6. Read the log and notify
 if [ -f "$PROJECT/data/needs_review.csv" ]; then
-    NEED_COUNT=$(python3 -c "
+    NEED_COUNT=$(uv run python3 -c "
 import csv
 with open('$PROJECT/data/needs_review.csv', encoding='utf-8') as f:
     rows = list(csv.DictReader(f))

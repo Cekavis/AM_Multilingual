@@ -1,0 +1,15 @@
+[project]
+name = "am-multilingual"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "dotenv>=0.9.9",
+    "google-genai>=1.66.0",
+    "hangul-romanize>=0.1.0",
+    "opencc>=1.2.0",
+    "pykakasi>=2.3.0",
+    "pypinyin>=0.55.0",
+    "tqdm>=4.67.3",
+]

@@ -137,27 +137,20 @@ def main():
     client = genai.Client(api_key=GEMINI_API) # type: ignore
     config = build_generation_config(MODEL_NAME)    
 
-    # Check API connectivity and model availability before the main loop to avoid wasting time on multiple failed attempts.
-    resp = client.models.generate_content(
-        model=MODEL_NAME,
-        contents='Reply with this exact JSON only: {"status": "ok"}'
-    )
-    resp = json.loads(resp.text) # type: ignore
-    if resp['status'] == 'ok':
-        print(f"🤖  Gemini API is working and model {MODEL_NAME} is ready...")
-        needs_review = gemini_main(recording_cache, fixed_cache, client, config)
-        if needs_review:
-            with open(FAILED_LOG_FILE, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=needs_review[0].keys())
-                writer.writeheader()
-                writer.writerows(needs_review)
-        
-        print(f"🤖  Gemini work completed successfully!")
+    print(f"🤖  Gemini API is working and model {MODEL_NAME} is ready...")
+    needs_review = gemini_main(recording_cache, fixed_cache, client, config)
+    if needs_review:
+        with open(FAILED_LOG_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=needs_review[0].keys())
+            writer.writeheader()
+            writer.writerows(needs_review)
+    
+    print(f"🤖  Gemini work completed successfully!")
 
-        if needs_review:
-            return True
-        else:
-            return False
+    if needs_review:
+        return True
+    else:
+        return False
 
 if __name__ == "__main__":
     main()
